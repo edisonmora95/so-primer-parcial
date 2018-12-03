@@ -41,8 +41,8 @@ int main() {
   /*
    * Then we open the file to write the results to*
    * */
-  FILE *fp;
-  fp = fopen("./pruebas.csv", "a");
+  // FILE *fp;
+  // fp = fopen("./pruebas.csv", "a");
   /*
    * Now we read from the shared memory segment until we get a value
    * */

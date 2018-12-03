@@ -77,12 +77,12 @@ int main () {
     strcpy(tmp_t, shm_t);
     if ((strcmp(tmp_t, "--") != 0) && (strcmp(old_t, tmp_t) != 0) && (switch_t == 0)) {
       switch_t = 1;
-      fprintf(stdout, "giroscopio: %s\n", tmp_t);
+      // fprintf(stdout, "giroscopio: %s\n", tmp_t);
       strcpy(old_t, tmp_t);
     }
     if ((strcmp(tmp_d, shm_d) != 0) && (switch_d == 0)) {
       switch_d = 1;
-      fprintf(stderr, "distancia: %s\n", tmp_d);
+      // fprintf(stderr, "distancia: %s\n", tmp_d);
       strcpy(old_d, shm_d);
     }
     strcpy(tmp_d, shm_d);
@@ -106,10 +106,10 @@ void *aux_func (void *param) {
   // sleep(3);
   // float sum = numbers[0] + numbers[1];
   float real_distance = numbers[1] * cos(numbers[0]);
-  fprintf(stdout, "Values are: %f & %f, and the sum is: %f\n", numbers[0], numbers[1], real_distance);
+  // fprintf(stdout, "Values are: %f & %f, and the sum is: %f\n", numbers[0], numbers[1], real_distance);
   // shm_p = (char *)sum;
   sprintf(shm_p,"%f", real_distance);
   
-  printf("Ending thread\n");
+  // printf("Ending thread\n");
   pthread_exit(0);
 }
