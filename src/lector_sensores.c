@@ -7,18 +7,26 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 #define SHMSZ 27
-
-/* struct params {
-  float distance;
-  float angle;
-}; */
-
+#define PI 3.14159265
 
 void *aux_func(void *param);
 
 char *shm_p;
+pthread_mutex_t mutex;
+int contador = 0;
+
+char old_t[SHMSZ];
+char old_d[SHMSZ];
+
+//===== Time measurement =====//
+clock_t start, end;
+double time_used;
+double avg_time;
+
+int numThreads = 0;
 
 int main () {
   key_t key_d, key_t, key_p;
@@ -28,8 +36,8 @@ int main () {
   //===== To store the values from the shared memory segment =====//
   char tmp_t[SHMSZ];
   char tmp_d[SHMSZ];
-  char old_t[SHMSZ];
-  char old_d[SHMSZ];
+  // char old_t[SHMSZ];
+  // char old_d[SHMSZ];
   //===== To indicate when a pair of distance-angle has been obtained=====//
   int switch_t = 0, switch_d = 0;
   //===== pthreads =====//
@@ -61,7 +69,7 @@ int main () {
     return (1);
   }
   //===== PRINTER PROCESS SHARED MEMORY SEGMENT =====//
-  key_p = 2795;
+  /* key_p = 2795;
   shmid_p = shmget(key_p, SHMSZ, IPC_CREAT | 0666);
   if (shmid_p < 0) {
     perror("shmget");
@@ -71,45 +79,59 @@ int main () {
   if (shm_p == (char *)-1) {
     perror("shmat");
     return (1);
-  }
+  } */
   
   while (1) {
     strcpy(tmp_t, shm_t);
+    if ((strcmp(tmp_t, "DONE") == 0) && (strcmp(tmp_d, "DONE") == 0)) {
+      break;
+    } 
     if ((strcmp(tmp_t, "--") != 0) && (strcmp(old_t, tmp_t) != 0) && (switch_t == 0)) {
+      start = clock();
       switch_t = 1;
-      // fprintf(stdout, "giroscopio: %s\n", tmp_t);
       strcpy(old_t, tmp_t);
     }
-    if ((strcmp(tmp_d, shm_d) != 0) && (switch_d == 0)) {
+    if ((strcmp(tmp_d, shm_d) != 0) && (strcmp(old_d, tmp_d) != 0)  && (switch_d == 0)) {
       switch_d = 1;
-      // fprintf(stderr, "distancia: %s\n", tmp_d);
       strcpy(old_d, shm_d);
     }
     strcpy(tmp_d, shm_d);
     if (switch_d == 1 && switch_t == 1) {
       switch_t = 0;
       switch_d = 0;
-      // fprintf(stdout, "Se han obtenido los valores de distancia y giroscopio para hacer el calculo\n");
-      // fprintf(stdout, "Los valores son: %f - %f\n", strtod(old_t, NULL), strtod(old_d, NULL));
-      float *numbers = malloc(2 * sizeof(float));
+      numThreads = numThreads + 1;
+      /* float *numbers = malloc(2 * sizeof(float));
       numbers[0] = strtod(old_t, NULL);
       numbers[1] = strtod(old_d, NULL);
-      pthread_create(&tid, &attr, aux_func, (void *)numbers);
+      pthread_create(&tid, &attr, aux_func, (void *)numbers); */
+      pthread_create(&tid, &attr, aux_func, NULL);
     }
   }
+  while (numThreads > 0) {
+    sleep(1);
+  }
+  sprintf(shm_t, "--");
+  sprintf(shm_d, "--");
+  printf("Average time: %f", avg_time / contador);
+  getchar();
   return(0);
 }
 
 void *aux_func (void *param) {
-  float *numbers = (float *)param;
-  // fprintf(stdout, "Values from thread are: %f - %f\n", numbers[0], numbers[1]);
-  // sleep(3);
-  // float sum = numbers[0] + numbers[1];
-  float real_distance = numbers[1] * cos(numbers[0]);
-  // fprintf(stdout, "Values are: %f & %f, and the sum is: %f\n", numbers[0], numbers[1], real_distance);
-  // shm_p = (char *)sum;
-  sprintf(shm_p,"%f", real_distance);
-  
-  // printf("Ending thread\n");
+  pthread_mutex_lock(&mutex);
+  contador = contador + 1;
+  // float *numbers = (float *)param;
+  // float real_distance = numbers[1] * cos(numbers[0] / (180 * PI));
+  float distance = strtod(old_d, NULL);
+  float angle = strtod(old_t, NULL);
+  float real_distance = distance * cos(angle / (180 * PI));
+  // fprintf(stdout, "%i) Values are: %f & %f, and the real distance is: %f\n", contador, numbers[0], numbers[1], real_distance);
+  end = clock();
+  time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  fprintf(stdout, "%i) Values are: %f & %f, and the real distance is: %f | time: %f\n", contador, distance, angle, real_distance, time_used);
+  avg_time = avg_time + time_used;
+  numThreads --;
+  // sprintf(shm_p,"%f", real_distance);
+  pthread_mutex_unlock(&mutex);
   pthread_exit(0);
 }

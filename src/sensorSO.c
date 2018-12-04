@@ -101,7 +101,7 @@ int main()
 	  if(nanosleep(&tim , &tim2) < 0 ) {
   			printf("Nano sleep failed \n");
 	        return -1;
-		}	
+		}
 	   sprintf(shmd,"%f",distances[i]);
 	   if (i%2==0){
 			sprintf(shmt,"%f",anglesD[i]); 
@@ -109,6 +109,8 @@ int main()
 			strcpy(shmt,"--");
 	   }
 	}
+	sprintf(shmd, "%s", "DONE");
+	sprintf(shmt, "%s", "DONE");
 return(0);
 
 }

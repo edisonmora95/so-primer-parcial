@@ -64,6 +64,7 @@ int main(int argc, char *argv[]) {
     }
     if (cpid == 0) {  /* Child */
       execvp(args[0], args);
+      // system("gnome-terminal -- ./bin/sensores");
       perror("execvp failed\n");
     } else {  /* Parent */
       pids[i] = cpid;
@@ -78,13 +79,13 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
   if (lector_pid == 0) {  /* lector_sensores */
-    execvp(args_lector[0], args_lector);
-    // system("gnome-terminal -- ./bin/lector_sensores");
-    perror("execvp lector_sensores failed");
+    // execvp(args_lector[0], args_lector);
+    system("gnome-terminal -- ./bin/lector_sensores");
+    // perror("execvp lector_sensores failed");
     exit(EXIT_FAILURE);
   }
   //===== Create printer process =====//
-  pid_t printer_pid;
+  /* pid_t printer_pid;
   char *args_printer[3] = {"./bin/printer", NULL};
   printer_pid = fork();
   if (printer_pid < 0) {
@@ -95,14 +96,14 @@ int main(int argc, char *argv[]) {
     // execvp(args_printer[0], args_printer);
     system("gnome-terminal -- ./bin/printer");
     // perror("printer execvp failed");
-    exit(EXIT_FAILURE);
-  }
+    // exit(EXIT_FAILURE);
+  } */
   //===== Show ids of child processes =====//
   for (i = 0; i < numProcesses; i = i + 1) {
     fprintf(stdout, "Sensor #%d pid: %d\n", (i + 1), pids[i]);
   }
   fprintf(stdout, "Lector pid: %d\n", lector_pid);
-  fprintf(stdout, "Printer pid: %d\n", printer_pid);
+  // fprintf(stdout, "Printer pid: %d\n", printer_pid);
   //===== Wait =====//
   /* for (i = 0; i < numProcesses; i = i + 1) {
     w = waitpid(pids[i], &status);
