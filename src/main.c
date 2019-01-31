@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <string.h>
 
 void sig_handler (int signal) {
   fprintf(stdout, "Signal: %d arrived\n", signal);
@@ -31,46 +32,79 @@ void child_kill_handler (int signal) {
 }
 
 int main(int argc, char *argv[]) {
+  char sensor_l[25], sensor_r[25], sensor_c[25];
   if (signal(SIGTERM, sig_handler) == SIG_ERR) {
     printf("Can't handle SIGTERM\n");
   }
   if (signal(SIGCHLD, child_kill_handler) == SIG_ERR) {
     printf("Can't handle SIGCHLD\n");
   }
-  //===== Get the number of processes to be created at first =====//
-  if (argc < 2 ) {
-    printf("Please indicate the number of sensors to be created\n");
+  //===== Get sensors locations =====//
+  FILE *fp;
+  fp = fopen("./config/main.config", "r");
+  if (fp == NULL) {
+    printf("No config file found!\n");
     exit(EXIT_FAILURE);
   }
-  if (argc > 2) {
-    printf("Too many arguments\n");
+  char buffer[25];
+  if (fscanf(fp, "%s", buffer) != EOF) {
+    strcpy(sensor_l, buffer);
+  }
+  if (fscanf(fp, "%s", buffer) != EOF ) {
+    strcpy(sensor_c, buffer);
+  }
+  if (fscanf(fp, "%s", buffer) != EOF) {
+    strcpy(sensor_r, buffer);
+  }
+  // printf("SensorL: %s\n", sensor_l);
+  // printf("SensorR: %s\n", sensor_r);
+  // printf("SensorC: %s\n", sensor_c);
+  fclose(fp);
+  //===== Create sensors =====//
+  pid_t pid_l, pid_c, pid_r, pids[2];
+  // Left sensor
+  pid_l = fork();
+  char *args_sensor_l[3] = {sensor_l, NULL};
+  if (pid_l == -1) {
+    perror("Fork failed");
     exit(EXIT_FAILURE);
   }
-  int numProcesses = 0;
-  sscanf(argv[1], "%d", &numProcesses);
-  if (numProcesses > 10) {
-    printf("Too many processes");
+  if (pid_l == 0) { /* CHILD */
+    execv(args_sensor_l[0], args_sensor_l);
+    perror("Left sensor failed");
+    exit(EXIT_FAILURE);
+  } else { /* PARENT */
+    pids[0] = pid_l;
+  }
+  // Center sensor
+  pid_c = fork();
+  char *args_sensor_c[3] = {sensor_c, NULL};
+  if (pid_c == -1) {
+    perror("Fork failed");
     exit(EXIT_FAILURE);
   }
-  //===== Create by using fork and execvp =====//
-  pid_t cpid, w, pids[numProcesses];
-  char *args[3] = {"./bin/sensores", NULL};
-  int i, status;
-  for (i = 0; i < numProcesses; i = i + 1) {
-    cpid = fork();
-    if (cpid == -1) {
-      perror("Fork failed");
-      exit(EXIT_FAILURE);
-    }
-    if (cpid == 0) {  /* Child */
-      execvp(args[0], args);
-      // system("gnome-terminal -- ./bin/sensores");
-      perror("execvp failed\n");
-    } else {  /* Parent */
-      pids[i] = cpid;
-    }
+  if (pid_c == 0) { /* CHILD */
+    execv(args_sensor_c[0], args_sensor_c);
+    perror("Center sensor failed");
+    exit(EXIT_FAILURE);
+  } else { /* PARENT */
+    pids[1] = pid_c;
   }
-  //===== Create lector_sensores process =====//
+  // Right sensor
+  pid_r = fork();
+  char *args_sensor_r[3] = {sensor_r, NULL};
+  if (pid_r == -1) {
+    perror("Fork failed");
+    exit(EXIT_FAILURE);
+  }
+  if (pid_r == 0) { /* CHILD */
+    execv(args_sensor_r[0], args_sensor_r);
+    perror("Right sensor failed");
+    exit(EXIT_FAILURE);
+  } else { /* PARENT */
+    pids[0] = pid_r;
+  }
+  /*//===== Create lector_sensores process =====//
   pid_t lector_pid;
   char *args_lector[3] = {"./bin/lector_sensores", NULL};
   lector_pid = fork();
@@ -78,26 +112,12 @@ int main(int argc, char *argv[]) {
     perror("lector_sensores fork failed");
     exit(EXIT_FAILURE);
   }
-  if (lector_pid == 0) {  /* lector_sensores */
+  if (lector_pid == 0) {  //  lector_sensores
     // execvp(args_lector[0], args_lector);
     system("gnome-terminal -- ./bin/lector_sensores");
     // perror("execvp lector_sensores failed");
     exit(EXIT_FAILURE);
   }
-  //===== Create printer process =====//
-  /* pid_t printer_pid;
-  char *args_printer[3] = {"./bin/printer", NULL};
-  printer_pid = fork();
-  if (printer_pid < 0) {
-    perror("printer fork failed");
-    exit(EXIT_FAILURE);
-  }
-  if (printer_pid == 0) {
-    // execvp(args_printer[0], args_printer);
-    system("gnome-terminal -- ./bin/printer");
-    // perror("printer execvp failed");
-    // exit(EXIT_FAILURE);
-  } */
   //===== Show ids of child processes =====//
   for (i = 0; i < numProcesses; i = i + 1) {
     fprintf(stdout, "Sensor #%d pid: %d\n", (i + 1), pids[i]);
@@ -105,10 +125,10 @@ int main(int argc, char *argv[]) {
   fprintf(stdout, "Lector pid: %d\n", lector_pid);
   // fprintf(stdout, "Printer pid: %d\n", printer_pid);
   //===== Wait =====//
-  /* for (i = 0; i < numProcesses; i = i + 1) {
-    w = waitpid(pids[i], &status);
-    fprintf(stdout,"%d\n", w);
-  } */
+  // for (i = 0; i < numProcesses; i = i + 1) {
+    // w = waitpid(pids[i], &status);
+    // fprintf(stdout,"%d\n", w);
+  // }*/
   getchar();
   return (0);
 }

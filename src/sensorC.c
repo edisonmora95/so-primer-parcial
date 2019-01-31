@@ -52,8 +52,9 @@ int main() {
 
   int freq = 0; // Frequency to write the data to the shared memory block
   //===== READ PARAMETERS FROM CONFIG FILE =====//
+  printf("Center sensor created\n");
   FILE *fp;
-  fp = fopen("./config/sensorL.config", "r");
+  fp = fopen("./config/sensorC.config", "r");
   if (fp == NULL) {
     printf("No se abrir un archivo\n");
     return(0);
@@ -118,10 +119,10 @@ int main() {
       printf("Nano sleep failed \n");
       return -1;
     }
-    printf("Distance: %f\n", distances[i]);
+   //  printf("Distance: %f\n", distances[i]);
     sprintf(shmd,"%f",distances[i]);
     if (i%freq == 0) {
-      printf("Angle: %f\n", anglesD[i]);
+      // printf("Angle: %f\n", anglesD[i]);
       sprintf(shmt,"%f",anglesD[i]); 
     } else {
       strcpy(shmt,"--");
