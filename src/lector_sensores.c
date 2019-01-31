@@ -12,14 +12,15 @@
 #define SHMSZ 27
 #define PI 3.14159265
 
+//===== FUNCTION DECLARATIONS =====//
 void *aux_func(void *param);
+void *read_giroscope(void *param);
+void *read_distance(void *param);
+void print_distance();
 
 char *shm_p;
 pthread_mutex_t mutex;
 int contador = 0;
-
-char old_t[SHMSZ];
-char old_d[SHMSZ];
 
 //===== Time measurement =====//
 clock_t start, end;
@@ -28,22 +29,26 @@ double avg_time;
 
 int numThreads = 0;
 
+//===== SWITCHES =====//
+int switch_d = 0; // Distance switch
+int switch_g = 0; // Giroscope switch
+
+//===== TEMP VARIABLES FOR SHM =====//
+char tmp_g[SHMSZ];
+char tmp_d[SHMSZ];
+
+//===== SHARED MEMORY VARIABLES =====//
+char *shm_d, *shm_g;
+
 int main () {
-  key_t key_d, key_t, key_p;
-  int shmid_d, shmid_t, shmid_p;
-  char *shm_d, *shm_t;
+  key_t key_d, key_g;
+  int shmid_d, shmid_g;
   int FLAGS = 0666;
-  //===== To store the values from the shared memory segment =====//
-  char tmp_t[SHMSZ];
-  char tmp_d[SHMSZ];
-  // char old_t[SHMSZ];
-  // char old_d[SHMSZ];
-  //===== To indicate when a pair of distance-angle has been obtained=====//
-  int switch_t = 0, switch_d = 0;
   //===== pthreads =====//
   pthread_t tid;
   pthread_attr_t attr;
   pthread_attr_init(&attr);
+  
   //===== DISTANCE SENSOR =====//
   key_d = 1234;
   shmid_d = shmget(key_d, SHMSZ, FLAGS);
@@ -57,81 +62,87 @@ int main () {
     return (1);
   }
   //===== GIROSCOPE SENSOR =====//
-  key_t = 5678; 
-  shmid_t = shmget(key_t, SHMSZ, FLAGS);
-  if (shmid_t < 0) {
+  key_g = 5678; 
+  shmid_g = shmget(key_g, SHMSZ, FLAGS);
+  if (shmid_g < 0) {
     perror("shmget");
     return (1);  
   }
-  shm_t = shmat(shmid_t, NULL, 0);
-  if (shm_t == (char *) -1) {
+  shm_g = shmat(shmid_g, NULL, 0);
+  if (shm_g == (char *) -1) {
     perror("shmat");
     return (1);
   }
-  //===== PRINTER PROCESS SHARED MEMORY SEGMENT =====//
-  /* key_p = 2795;
-  shmid_p = shmget(key_p, SHMSZ, IPC_CREAT | 0666);
-  if (shmid_p < 0) {
-    perror("shmget");
-    return (1);
-  }
-  shm_p = shmat(shmid_p, NULL, 0);
-  if (shm_p == (char *)-1) {
-    perror("shmat");
-    return (1);
-  } */
+
+  //===== CREATE THREADS =====//
+  pthread_t tid_g; // Giroscope reader thread
+  pthread_create(&tid_g, &attr, read_giroscope, NULL);
+  pthread_t tid_d; // Distance sensor reader thread
+  pthread_create(&tid_d, &attr, read_distance, NULL);
+
+  pthread_join(tid_d, NULL);
+  pthread_join(tid_g, NULL);
   
-  while (1) {
-    strcpy(tmp_t, shm_t);
-    if ((strcmp(tmp_t, "DONE") == 0) && (strcmp(tmp_d, "DONE") == 0)) {
-      break;
-    } 
-    if ((strcmp(tmp_t, "--") != 0) && (strcmp(old_t, tmp_t) != 0) && (switch_t == 0)) {
-      start = clock();
-      switch_t = 1;
-      strcpy(old_t, tmp_t);
-    }
-    if ((strcmp(tmp_d, shm_d) != 0) && (strcmp(old_d, tmp_d) != 0)  && (switch_d == 0)) {
-      switch_d = 1;
-      strcpy(old_d, shm_d);
-    }
-    strcpy(tmp_d, shm_d);
-    if (switch_d == 1 && switch_t == 1) {
-      switch_t = 0;
-      switch_d = 0;
-      numThreads = numThreads + 1;
-      /* float *numbers = malloc(2 * sizeof(float));
-      numbers[0] = strtod(old_t, NULL);
-      numbers[1] = strtod(old_d, NULL);
-      pthread_create(&tid, &attr, aux_func, (void *)numbers); */
-      pthread_create(&tid, &attr, aux_func, NULL);
-    }
-  }
-  while (numThreads > 0) {
-    sleep(1);
-  }
-  sprintf(shm_t, "--");
+  sprintf(shm_g, "--");
   sprintf(shm_d, "--");
+  sprintf(tmp_d, "--");
+  sprintf(tmp_g, "--");
   printf("Average time: %f", avg_time / contador);
   getchar();
   return(0);
 }
-
-void *aux_func (void *param) {
-  pthread_mutex_lock(&mutex);
-  contador = contador + 1;
-  // float *numbers = (float *)param;
-  // float real_distance = numbers[1] * cos(numbers[0] / (180 * PI));
-  float distance = strtod(old_d, NULL);
-  float angle = strtod(old_t, NULL);
-  float real_distance = distance * cos(angle / (180 * PI));
-  // fprintf(stdout, "%i) Values are: %f & %f, and the real distance is: %f\n", contador, numbers[0], numbers[1], real_distance);
-  end = clock();
-  time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-  fprintf(stdout, "%i) Values are: %f & %f, and the real distance is: %f | time: %f\n", contador, distance, angle, real_distance, time_used);
-  avg_time = avg_time + time_used;
-  numThreads --;
-  // sprintf(shm_p,"%f", real_distance);
-  pthread_mutex_unlock(&mutex);
+// Thread for reading gyroscope
+void *read_giroscope (void *param) {
+  strcpy(tmp_g, shm_g);
+  while (1) {
+    // When both switches are 'on', it means a pair of distance-angle has been read
+    if (switch_d == 1 && switch_g == 1) {
+      print_distance();
+    }
+    // When a new valid value is read, it sets the gyroscope switch to 'on'
+    if (strcmp(tmp_g, shm_g) != 0 && strcmp("--", shm_g) != 0 && (switch_g == 0)) {
+      printf("Nuevo valor de giroscopio leido: ");
+      printf("%s\n", shm_g);
+      strcpy(tmp_g, shm_g);
+      switch_g = 1;
+    }
+    if (strcmp(tmp_g, "DONE") == 0) {
+      break;
+    }
+  }
   pthread_exit(0);
 }
+// Thread for reading distnce sensor
+void *read_distance (void *param) {
+  strcpy(tmp_d, shm_d);
+  while (1) {
+    /*
+    if (switch_d == 1 && switch_g == 1) {
+      // print_distance();
+    } */
+    if ((strcmp(tmp_d, "--") != 0) && (switch_d == 0) && (strcmp(tmp_d, shm_d) != 0)) {
+      printf("Valor de distancia leido: ");
+      printf("%s\n", shm_d);
+      switch_d = 1;
+    }
+    if (strcmp(tmp_d, "DONE") == 0) {
+      break;
+    }
+    strcpy(tmp_d, shm_d);
+  }
+  pthread_exit(0);
+}
+
+void print_distance () {
+  float distance = strtod(tmp_d, NULL);
+  float angle = strtod(tmp_g, NULL);
+  float real_distance = distance * cos(angle / (180 * PI));
+  fprintf(stdout, "%i) Values are : %f & %f, real distance is: %f\n", contador, distance, angle, real_distance);
+  strcpy(tmp_g, "--");
+  strcpy(tmp_d, "--");
+  switch_d = 0;
+  switch_g = 0;
+  contador++;
+}
+
+
