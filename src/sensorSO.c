@@ -50,7 +50,25 @@ int main() {
   tim.tv_sec = 1;
   tim.tv_nsec = 0;
 
-  keyd = 1234;
+  int freq = 0; // Frequency to write the data to the shared memory block
+  //===== READ PARAMETERS FROM CONFIG FILE =====//
+  FILE *fp;
+  fp = fopen("./config/sensorL.config", "r");
+  if (fp == NULL) {
+    printf("No se abrir un archivo\n");
+    return(0);
+  }
+  char str[5];
+  // First value is the frequency
+  if (fscanf(fp, "%s", str) != EOF) {
+    freq = atoi(str);
+  }
+  // Second value is the shared memory block
+  if (fscanf(fp, "%s", str) != EOF) {
+    keyd = atoi(str);
+  }
+  fclose(fp);
+  
   if ((shmidd = shmget(keyd, SHMSZ, IPC_CREAT | 0666)) < 0) {
     perror("shmget");
     return(1);
@@ -100,9 +118,9 @@ int main() {
       printf("Nano sleep failed \n");
       return -1;
     }
-    // printf("Distance: %f\n", distances[i]);
+    printf("Distance: %f\n", distances[i]);
     sprintf(shmd,"%f",distances[i]);
-    if (i%2 == 0) {
+    if (i%freq == 0) {
       printf("Angle: %f\n", anglesD[i]);
       sprintf(shmt,"%f",anglesD[i]); 
     } else {
