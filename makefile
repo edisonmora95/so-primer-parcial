@@ -15,13 +15,13 @@ lectorC: ./src/lectorC.c
 sensores: sensorL sensorR sensorC
 
 sensorL: ./src/sensorL.c
-	gcc -o ./bin/sensorL ./src/sensorL.c -lm
+	gcc -o ./bin/sensorL ./src/sensorL.c -lpthread -lm
 
 sensorR: ./src/sensorR.c
-	gcc -o ./bin/sensorR ./src/sensorR.c -lm
+	gcc -o ./bin/sensorR ./src/sensorR.c -lpthread -lm
 
 sensorC: ./src/sensorC.c
-	gcc -o ./bin/sensorC ./src/sensorC.c -lm
+	gcc -o ./bin/sensorC ./src/sensorC.c -lpthread -lm
 
 printer: ./src/printer.c
 	gcc -o ./bin/printer ./src/printer.c -lm

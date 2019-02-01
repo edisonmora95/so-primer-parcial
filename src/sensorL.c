@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <pthread.h>
 
 #define SHMSZ     27
 #define MAX_SAMPLES 100
@@ -34,11 +35,14 @@
         /* ranf() is uniform in 0..1 */
 
 float box_muller(float m, float s);	/* normal random variate generator */
+void *read_memory(void *param);
+
+int freq = 0; // Frequency to write the data to the shared memory block
 
 int main() {
   char c;
   int shmidd,shmidt;
-  key_t keyd,keyt;
+  key_t keyd, keyt, key_freq;
   char *shmd, *shmt;
   int i,j;
   float distances[MAX_SAMPLES];
@@ -50,7 +54,6 @@ int main() {
   tim.tv_sec = 1;
   tim.tv_nsec = 0;
   printf("Left sensor created\n");
-  int freq = 0; // Frequency to write the data to the shared memory block
   //===== READ PARAMETERS FROM CONFIG FILE =====//
   FILE *fp;
   fp = fopen("./config/sensorL.config", "r");
@@ -66,6 +69,10 @@ int main() {
   // Second value is the shared memory block
   if (fscanf(fp, "%s", str) != EOF) {
     freq = atoi(str);
+  }
+  // Third value is the shared memory block for the frequency sync
+  if (fscanf(fp, "%s", str) != EOF) {
+    key_freq = atoi(str);
   }
   fclose(fp);
   
@@ -85,43 +92,47 @@ int main() {
   if ((shmt = shmat(shmidt, NULL, 0)) == (char *) -1) {
     perror("shmat");
     return(1);
-  }    
+  }
 
+  // Create thread to read shared memory block
+  pthread_t tid_freq;
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+  pthread_create(&tid_freq, &attr, read_memory, (void *) key_freq);
+  
   mu = 0;
   sigma = 25;    
   // sprintf(shmd, "%s", "---");
   // sprintf(shmt, "%s", "---");
-  sleep(3);
-
-  for (i=0;i<MAX_SAMPLES_THETA;i++) {
+  sleep(2);
+  for (i = 0; i < MAX_SAMPLES_THETA; i++) {
     angles[i]=box_muller(mu,sigma);
   }
 	
   j = -1;
-  for (i=0;i<MAX_SAMPLES_THETA-1;i++) {        
-    if (j++<MAX_SAMPLES) anglesD[j]=angles[i];
-    if (j++<MAX_SAMPLES) {
-      delta_theta=abs(angles[i+1]-angles[i])/2;
-      if (angles[i+1]>angles[i]) 
-        anglesD[j]= angles[i]+delta_theta;
+  for (i = 0; i < MAX_SAMPLES_THETA - 1; i++) {        
+    if (j++ < MAX_SAMPLES) anglesD[j] = angles[i];
+    if (j++ < MAX_SAMPLES) {
+      delta_theta=abs(angles[i+1] - angles[i]) / 2;
+      if (angles[i+1] > angles[i]) 
+        anglesD[j] = angles[i] + delta_theta;
       else
-        anglesD[j]= angles[i]-delta_theta;
+        anglesD[j] = angles[i] - delta_theta;
     }
   }
    
-  for (i=0;i<j;i++) {
-    distances[i]=DIST/cos(anglesD[i]/180*PI);		
+  for (i = 0; i < j; i++) {
+    distances[i] = DIST / cos(anglesD[i]/180*PI);		
   }
-
-  for (i=0;i<j;i++) {
+  for (i = 0; i < j; i++) {
     if (nanosleep(&tim , &tim2) < 0 ) {
       printf("Nano sleep failed \n");
       return -1;
     }
-   //  printf("Distance: %f\n", distances[i]);
+    //printf("Distance: %f\n", distances[i]);
     sprintf(shmd,"%f",distances[i]);
     if (i%freq == 0) {
-      // printf("Angle: %f\n", anglesD[i]);
+      printf("Angle: %f\n", anglesD[i]);
       sprintf(shmt,"%f",anglesD[i]); 
     } else {
       strcpy(shmt,"--");
@@ -129,6 +140,7 @@ int main() {
   }
   sprintf(shmd, "%s", "DONE");
   sprintf(shmt, "%s", "DONE");
+  pthread_join(tid_freq, NULL);
   return(0);
 }
 
@@ -155,3 +167,28 @@ float box_muller(float m, float s) {	/* normal random variate generator */
   return( m + y1 * s );
 }
 
+void *read_memory (void *param) {
+  key_t key_freq = (key_t)param;
+  char tmp_freq[SHMSZ];
+  int shmid_freq;
+  char *shm_freq;
+  shmid_freq = shmget(key_freq, SHMSZ, 0666);
+  if (shmid_freq < 0) {
+    perror("shmget");
+    pthread_exit(0);
+  }
+  shm_freq = shmat(shmid_freq, NULL, 0);
+  if (shm_freq == (char *) -1) {
+    printf("Error\n");
+    perror("shmat");
+    pthread_exit(0);
+  }
+  strcpy(tmp_freq, shm_freq);
+  while (1) {
+   if (strcmp(tmp_freq, shm_freq) != 0 && strcmp(shm_freq, "") != 0) {
+     strcpy(tmp_freq, shm_freq);
+     freq = atoi(shm_freq);
+   }
+  }
+  pthread_exit(0);
+}

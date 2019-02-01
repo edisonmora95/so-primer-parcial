@@ -4,6 +4,10 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <string.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+
+#define SHMSZ     27
 
 void sig_handler (int signal) {
   fprintf(stdout, "Signal: %d arrived\n", signal);
@@ -59,10 +63,20 @@ int main(int argc, char *argv[]) {
   if (fscanf(fp, "%s", buffer) != EOF) {
     strcpy(lector_sensores, buffer);
   }
-  // printf("SensorL: %s\n", sensor_l);
-  // printf("SensorR: %s\n", sensor_r);
-  // printf("SensorC: %s\n", sensor_c);
   fclose(fp);
+  //===== SHARED MEMORY BLOCK =====//
+  int shmid_freq;
+  char *shm_freq;
+  key_t key_freq = 9999;
+  if ((shmid_freq = shmget(key_freq, SHMSZ, IPC_CREAT | 0666)) < 0) {
+    perror("shmget");
+    return(1);
+  }
+  if ((shm_freq = shmat(shmid_freq, NULL, 0)) == (char *) -1) {
+    perror("shmat");
+    return(1);
+  }
+
   //===== Create sensors =====//
   pid_t pid_l, pid_c, pid_r, pids[2];
   // Left sensor
@@ -150,8 +164,8 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  /*//===== Show ids of child processes =====//
-  for (i = 0; i < numProcesses; i = i + 1) {
+  //===== Show ids of child processes =====//
+  /* for (i = 0; i < 6; i = i + 1) {
     fprintf(stdout, "Sensor #%d pid: %d\n", (i + 1), pids[i]);
   }
   fprintf(stdout, "Lector pid: %d\n", lector_pid);
@@ -161,6 +175,27 @@ int main(int argc, char *argv[]) {
     // w = waitpid(pids[i], &status);
     // fprintf(stdout,"%d\n", w);
   // }*/
+  
+  //===== MENU =====//
+  int opcion;
+  int freq;
+  while (1) {
+    printf("\nBienvenido al administrador del programa, seleccione una de las opciones a ejecutar:\n");
+    printf("(1)Modificar la frecuencia de los sensores.\n");
+    scanf("%d", &opcion);
+    if (opcion < 1 || opcion > 6) {
+      printf("\nOpcion no dentro del rango, escoja nuevamente.\n");
+    } else {
+      switch(opcion) {
+        case 1:
+	  printf("Ha seleccionado la opción de modificar la frecuencia de los sensores.\nIngrese la nueva frecuencia: ");
+          scanf("%d", &freq);
+	  sprintf(shm_freq, "%d", freq);
+	  break;
+      }
+    }
+
+  }
   getchar();
   return (0);
 }
