@@ -42,6 +42,20 @@ char *shm_d, *shm_g;
 
 int main () {
   key_t key_d, key_g;
+  //===== READ PARAMETERS FROM CONFIG FILE =====//
+  FILE *fp;
+  char str[5];
+  fp = fopen("./config/sensorR.config", "r");
+  if (fp == NULL) {
+    printf("No se abrir un archivo\n");
+    return(0);
+  }
+  if (fscanf(fp, "%s", str) != EOF) {
+    key_d = atoi(str);
+    key_g = key_d + 1;
+  }
+  fclose(fp);
+
   int shmid_d, shmid_g;
   int FLAGS = 0666;
   //===== pthreads =====//
@@ -50,9 +64,8 @@ int main () {
   pthread_attr_init(&attr);
   
   //===== DISTANCE SENSOR =====//
-  key_d = 1234;
   shmid_d = shmget(key_d, SHMSZ, FLAGS);
-  if ( shmid_d < 0) {
+  if (shmid_d < 0) {
     perror("smget");
     return (1);
   }
@@ -62,7 +75,6 @@ int main () {
     return (1);
   }
   //===== GIROSCOPE SENSOR =====//
-  key_g = 5678; 
   shmid_g = shmget(key_g, SHMSZ, FLAGS);
   if (shmid_g < 0) {
     perror("shmget");

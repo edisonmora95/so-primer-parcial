@@ -32,7 +32,7 @@ void child_kill_handler (int signal) {
 }
 
 int main(int argc, char *argv[]) {
-  char sensor_l[25], sensor_r[25], sensor_c[25];
+  char sensor_l[25], sensor_r[25], sensor_c[25], lector_sensores[25];
   if (signal(SIGTERM, sig_handler) == SIG_ERR) {
     printf("Can't handle SIGTERM\n");
   }
@@ -55,6 +55,9 @@ int main(int argc, char *argv[]) {
   }
   if (fscanf(fp, "%s", buffer) != EOF) {
     strcpy(sensor_r, buffer);
+  }
+  if (fscanf(fp, "%s", buffer) != EOF) {
+    strcpy(lector_sensores, buffer);
   }
   // printf("SensorL: %s\n", sensor_l);
   // printf("SensorR: %s\n", sensor_r);
@@ -104,21 +107,50 @@ int main(int argc, char *argv[]) {
   } else { /* PARENT */
     pids[0] = pid_r;
   }
-  /*//===== Create lector_sensores process =====//
-  pid_t lector_pid;
-  char *args_lector[3] = {"./bin/lector_sensores", NULL};
-  lector_pid = fork();
-  if (lector_pid < 0) {
+  //===== Create lector_sensores process =====//
+  pid_t lectorL_pid;
+  // char *args_lector[3] = {lector_sensores, NULL};
+  lectorL_pid = fork();
+  if (lectorL_pid < 0) {
     perror("lector_sensores fork failed");
     exit(EXIT_FAILURE);
   }
-  if (lector_pid == 0) {  //  lector_sensores
+  if (lectorL_pid == 0) {  //  lector_sensores
     // execvp(args_lector[0], args_lector);
-    system("gnome-terminal -- ./bin/lector_sensores");
+    system("gnome-terminal -- ./bin/lectorL");
     // perror("execvp lector_sensores failed");
     exit(EXIT_FAILURE);
   }
-  //===== Show ids of child processes =====//
+  //===== Create lector_sensores process =====//
+  pid_t lectorR_pid;
+  // char *args_lector[3] = {lector_sensores, NULL};
+  lectorR_pid = fork();
+  if (lectorR_pid < 0) {
+    perror("lector_sensores fork failed");
+    exit(EXIT_FAILURE);
+  }
+  if (lectorR_pid == 0) {  //  lector_sensores
+    // execvp(args_lector[0], args_lector);
+    system("gnome-terminal -- ./bin/lectorR");
+    // perror("execvp lector_sensores failed");
+    exit(EXIT_FAILURE);
+  }
+  //===== Create lector_sensores process =====//
+  pid_t lectorC_pid;
+  // char *args_lector[3] = {lector_sensores, NULL};
+  lectorC_pid = fork();
+  if (lectorC_pid < 0) {
+    perror("lector_sensores fork failed");
+    exit(EXIT_FAILURE);
+  }
+  if (lectorC_pid == 0) {  //  lector_sensores
+    // execvp(args_lector[0], args_lector);
+    system("gnome-terminal -- ./bin/lectorC");
+    // perror("execvp lector_sensores failed");
+    exit(EXIT_FAILURE);
+  }
+
+  /*//===== Show ids of child processes =====//
   for (i = 0; i < numProcesses; i = i + 1) {
     fprintf(stdout, "Sensor #%d pid: %d\n", (i + 1), pids[i]);
   }

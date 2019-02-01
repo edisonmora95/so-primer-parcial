@@ -1,8 +1,16 @@
 main: ./src/main.c
 	gcc -o ./bin/main ./src/main.c
 
-lector_sensores: ./src/lector_sensores.c
-	gcc -o ./bin/lector_sensores ./src/lector_sensores.c -lpthread -lm
+lectores: lectorL lectorR lectorC
+
+lectorL: ./src/lectorL.c
+	gcc -o ./bin/lectorL ./src/lectorL.c -lpthread -lm
+
+lectorR: ./src/lectorR.c
+	gcc -o ./bin/lectorR ./src/lectorR.c -lpthread -lm
+
+lectorC: ./src/lectorC.c
+	gcc -o ./bin/lectorC ./src/lectorC.c -lpthread -lm
 
 sensores: sensorL sensorR sensorC
 

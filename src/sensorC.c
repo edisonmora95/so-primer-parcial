@@ -62,11 +62,11 @@ int main() {
   char str[5];
   // First value is the frequency
   if (fscanf(fp, "%s", str) != EOF) {
-    freq = atoi(str);
+    keyd = atoi(str);
   }
   // Second value is the shared memory block
   if (fscanf(fp, "%s", str) != EOF) {
-    keyd = atoi(str);
+    freq = atoi(str);
   }
   fclose(fp);
   
@@ -78,7 +78,7 @@ int main() {
     perror("shmat");
     return(1);
   }    
-  keyt = 5678;
+  keyt = keyd + 1;
   if ((shmidt = shmget(keyt, SHMSZ, IPC_CREAT | 0666)) < 0) {
     perror("shmget");
     return(1);
