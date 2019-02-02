@@ -118,17 +118,17 @@ int main() {
 
   while (1) {
     if (strcmp(tmp_l, shm_l) != 0) {
-      fprintf(stdout, "Distance from left reader is: %s\n", shm_l);
+      // fprintf(stdout, "Distance from left reader is: %s\n", shm_l);
       switch_l = 1;
       strcpy(tmp_l, shm_l);
     }
     if (strcmp(tmp_r, shm_r) != 0) {
-      fprintf(stdout, "Distance from right reader is: %s\n", shm_r);
+      // fprintf(stdout, "Distance from right reader is: %s\n", shm_r);
       switch_r = 1;
       strcpy(tmp_r, shm_r);
     }
     if (strcmp(tmp_c, shm_c) != 0) {
-      fprintf(stdout, "Distance from center reader is: %s\n", shm_c);
+      // fprintf(stdout, "Distance from center reader is: %s\n", shm_c);
       switch_c = 1;
       strcpy(tmp_c, shm_c);
     }
@@ -170,7 +170,7 @@ void *car_obstacle (void *param) {
   // printf("Right: %f\n", distance->right);
   printf("SD: %f\n", sd);
 
-  if ((fabs(distance->left - distance->center) < (T*sd)) && (fabs(distance->right - distance->center) < (T*sd))) {
+  if ((fabs(distance->left - distance->center) <= (T*sd)) && (fabs(distance->right - distance->center) <= (T*sd))) {
     printf("ES UN CARRO\n");
   }
 
