@@ -71,7 +71,8 @@ int main(int argc, char *argv[]) {
   }
   fclose(fp);
 
-  //===== SHARED MEMORY BLOCK =====//
+  //===== SHARED MEMORY BLOCKS =====//
+  // FREQUENCY
   int shmid_freq;
   char *shm_freq;
   key_t key_freq = 9999;
@@ -80,6 +81,30 @@ int main(int argc, char *argv[]) {
     return(1);
   }
   if ((shm_freq = shmat(shmid_freq, NULL, 0)) == (char *) -1) {
+    perror("shmat");
+    return(1);
+  }
+  // T
+  int shmid_T;
+  char *shm_T;
+  key_t key_T = 9998;
+  if ((shmid_T = shmget(key_T, SHMSZ, IPC_CREAT | 0666)) < 0) {
+    perror("shmget");
+    return(1);
+  }
+  if ((shm_T = shmat(shmid_T, NULL, 0)) == (char *) -1) {
+    perror("shmat");
+    return(1);
+  }
+  // W
+  int shmid_W;
+  char *shm_W;
+  key_t key_W = 9997;
+  if ((shmid_W = shmget(key_W, SHMSZ, IPC_CREAT | 0666)) < 0) {
+    perror("shmget");
+    return(1);
+  }
+  if ((shm_W = shmat(shmid_W, NULL, 0)) == (char *) -1) {
     perror("shmat");
     return(1);
   }
@@ -201,9 +226,12 @@ int main(int argc, char *argv[]) {
   sleep(2);
   int opcion;
   int freq;
+  float T, W;
   while (1) {
     printf("\nBienvenido al administrador del programa, seleccione una de las opciones a ejecutar:\n");
-    printf("(1)Modificar la frecuencia de los sensores.\n");
+    printf("1) Modificar la frecuencia de los sensores.\n");
+    printf("2) Modificar el valor de T.\n");
+    printf("3) Modificar el valor de W.\n");
     scanf("%d", &opcion);
     if (opcion < 1 || opcion > 6) {
       printf("\nOpcion no dentro del rango, escoja nuevamente.\n");
@@ -214,6 +242,17 @@ int main(int argc, char *argv[]) {
           scanf("%d", &freq);
 	  sprintf(shm_freq, "%d", freq);
 	  break;
+	case 2:
+	  printf("Ingrese el nuevo valor de T: ");
+	  scanf("%f", &T);
+	  sprintf(shm_T, "%f", T);
+	  break;
+	case 3:
+          printf("Ingrese el nuevo valor de W: ");
+          scanf("%f", &W);
+          sprintf(shm_W, "%f", W);
+          break;
+
       }
     }
 

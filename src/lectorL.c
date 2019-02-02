@@ -160,7 +160,7 @@ void print_distance () {
   float distance = strtod(tmp_d, NULL);
   float angle = strtod(tmp_g, NULL);
   float real_distance = distance * cos(angle / (180 * PI));
-  fprintf(stdout, "%i)LEFT Values are : %f & %f, real distance is: %f\n", contador, distance, angle, real_distance);
+  // fprintf(stdout, "%i)LEFT Values are : %f & %f, real distance is: %f\n", contador, distance, angle, real_distance);
   strcpy(tmp_g, "--");
   strcpy(tmp_d, "--");
   switch_d = 0;

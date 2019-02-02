@@ -22,22 +22,22 @@ struct distance {
   double right;
 };
 
-double T = 0.5;
-double W = 2;
+float T = 0.2;
+float W = 2;
 
 void *car_obstacle(void *param);
 
 int main() {
   printf("PRINTER PROCESS\n");
   struct distance distance;
-  int shmid_l, shmid_r, shmid_c; // ID of the shared memory segment
-  key_t key_r, key_l, key_c; // Key of the shared memory
+  int shmid_l, shmid_r, shmid_c, shmid_T, shmid_W; // ID of the shared memory segment
+  key_t key_r, key_l, key_c, key_T = 9998, key_W = 9997; // Key of the shared memory
   key_l = 1002;
   key_r = 2002;
   key_c = 3002;
   int FLAGS = 0666;
-  char *shm_l, *shm_r, *shm_c;
-  char tmp_l[SHMSZ], tmp_r[SHMSZ], tmp_c[SHMSZ];
+  char *shm_l, *shm_r, *shm_c, *shm_T, *shm_W;
+  char tmp_l[SHMSZ], tmp_r[SHMSZ], tmp_c[SHMSZ], tmp_T[SHMSZ], tmp_W[SHMSZ];
   int switch_l, switch_r, switch_c;
 
   pthread_t tid;
@@ -77,6 +77,29 @@ int main() {
     perror("Error attaching the shared memory segment");
     exit(1);
   }
+  //===== MEM BLOCK FOR T VALUE =====//
+  shmid_T = shmget(key_T, SHMSZ, IPC_CREAT | 0666);
+  if (shmid_T < 0) {
+    perror("Error creating shared memory segment");
+    exit(1);
+  }
+  shm_T = shmat(shmid_T, NULL, 0);
+  if (shm_T == (char *)-1) {
+    perror("Error attaching the shared memory segment");
+    exit(1);
+  }
+  //===== MEM BLOCK FOR W VALUE =====//
+  shmid_W = shmget(key_W, SHMSZ, IPC_CREAT | 0666);
+  if (shmid_W < 0) {
+    perror("Error creating shared memory segment");
+    exit(1);
+  }
+  shm_W = shmat(shmid_W, NULL, 0);
+  if (shm_W == (char *)-1) {
+    perror("Error attaching the shared memory segment");
+    exit(1);
+  }
+
   while (1) {
     if (strcmp(tmp_l, shm_l) != 0) {
       fprintf(stdout, "Distance from left reader is: %s\n", shm_l);
@@ -92,6 +115,16 @@ int main() {
       fprintf(stdout, "Distance from center reader is: %s\n", shm_c);
       switch_c = 1;
       strcpy(tmp_c, shm_c);
+    }
+    if (strcmp(tmp_T, shm_T) != 0) {
+      // fprintf(stdout, "New value of T: %f\n", atof(shm_T));
+      strcpy(tmp_T, shm_T);
+      T = atof(shm_T);
+    }
+    if (strcmp(tmp_W, shm_W) != 0) {
+      // fprintf(stdout, "New value of W: %f\n", atof(shm_W));
+      strcpy(tmp_W, shm_W);
+      W = atof(shm_W);
     }
     if ((switch_l == 1) && (switch_r == 1) && (switch_c == 1)) {
       switch_l = 0;
