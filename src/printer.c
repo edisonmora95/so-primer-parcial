@@ -31,7 +31,7 @@ int main() {
   printf("PRINTER PROCESS\n");
   struct distance distance;
   int shmid_l, shmid_r, shmid_c, shmid_T, shmid_W; // ID of the shared memory segment
-  key_t key_r, key_l, key_c, key_T = 9998, key_W = 9997; // Key of the shared memory
+  key_t key_r, key_l, key_c, key_T, key_W; // Key of the shared memory
   key_l = 1002;
   key_r = 2002;
   key_c = 3002;
@@ -40,6 +40,22 @@ int main() {
   char tmp_l[SHMSZ], tmp_r[SHMSZ], tmp_c[SHMSZ], tmp_T[SHMSZ], tmp_W[SHMSZ];
   int switch_l, switch_r, switch_c;
 
+  //===== GET VALUES FROM CONFIG =====//
+  FILE *fp;
+  fp = fopen("./config/printer.config", "r");
+  if (fp == NULL) {
+    printf("No config file found!\n");
+    exit(EXIT_FAILURE);
+  }
+  char buffer[25];
+  if (fscanf(fp, "%s", buffer)) {
+    key_T = atoi(buffer);
+  }
+  if (fscanf(fp, "%s", buffer)) {
+    key_W = atoi(buffer);
+  }
+  fclose(fp);
+  
   pthread_t tid;
   pthread_attr_t attr;
   pthread_attr_init(&attr);
@@ -137,7 +153,7 @@ int main() {
 
     }
   }
-  sleep(5);
+  getchar();
   return(0);
 }
 

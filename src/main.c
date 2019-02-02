@@ -37,6 +37,7 @@ void child_kill_handler (int signal) {
 
 int main(int argc, char *argv[]) {
   char sensor_l[25], sensor_r[25], sensor_c[25], reader_l[25], reader_r[25], reader_c[25];
+  key_t key_T, key_W;
   if (signal(SIGTERM, sig_handler) == SIG_ERR) {
     printf("Can't handle SIGTERM\n");
   }
@@ -70,6 +71,20 @@ int main(int argc, char *argv[]) {
     strcpy(reader_r, buffer);
   }
   fclose(fp);
+  //===== GET PRINTER SHM ID =====//
+  FILE *fpP;
+  fpP = fopen("./config/printer.config", "r");
+  if (fpP == NULL) {
+    printf("No config file found!\n");
+    exit(EXIT_FAILURE);
+  }
+  if (fscanf(fpP, "%s", buffer)) {
+    key_T = atoi(buffer);
+  }
+  if(fscanf(fpP, "%s", buffer)) {
+    key_W = atoi(buffer);
+  }
+  fclose(fpP);
 
   //===== SHARED MEMORY BLOCKS =====//
   // FREQUENCY
@@ -87,8 +102,7 @@ int main(int argc, char *argv[]) {
   // T
   int shmid_T;
   char *shm_T;
-  key_t key_T = 9998;
-  if ((shmid_T = shmget(key_T, SHMSZ, IPC_CREAT | 0666)) < 0) {
+    if ((shmid_T = shmget(key_T, SHMSZ, IPC_CREAT | 0666)) < 0) {
     perror("shmget");
     return(1);
   }
@@ -99,8 +113,7 @@ int main(int argc, char *argv[]) {
   // W
   int shmid_W;
   char *shm_W;
-  key_t key_W = 9997;
-  if ((shmid_W = shmget(key_W, SHMSZ, IPC_CREAT | 0666)) < 0) {
+    if ((shmid_W = shmget(key_W, SHMSZ, IPC_CREAT | 0666)) < 0) {
     perror("shmget");
     return(1);
   }
