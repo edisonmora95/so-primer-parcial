@@ -1,0 +1,23 @@
+El proyecto consta de 4 programas: 
+ * Sensor
+ * Lector
+ * Printer
+ * Main
+
+También se cuenta con los siguientes bloques de memoria compartida:
+ * Bloques para los valores de distancia de cada sensor. En total 3.
+ * Bloques para los valores de ángulo de cada sensor. En total 3.
+ * Bloques para cada valor de distancia real calculada por cada lector. En total 3.
+ * Bloques para el valor de frecuencia de cada sensor. En total 3.
+ * 1 bloque para el valor de W.
+ * 1 bloque para el valor de T.
+De esta manera se pueden modificar desde el main los valores de cada uno de estos parámetros mientras se está ejecutando el programa.
+
+Al igual que el primer parcial, el sensor escribe los datos de distancia y ángulo en bloques de memoria compartida y lector los lee y calcula la distancia.
+
+La frecuencia con la que se muestran los pares distancia-ángulo depende del valor de frecuencia que se encuentra en el config de cada sensor.
+
+Una vez que el lector recibe un par distancia-ángulo, se calcula la distancia y el lector escribe ese valor en su bloque de memoria correspondiente.
+
+El printer está leyendo constantemente ese bloque de memoria hasta que encuentra 3 valores de distancia real.
+Una vez encontrados 3 valores, se crea un thread y ahí se verifica si es carro u obstáculo.
