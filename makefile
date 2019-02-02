@@ -24,7 +24,7 @@ sensorC: ./src/sensorC.c
 	gcc -o ./bin/sensorC ./src/sensorC.c -lpthread -lm
 
 printer: ./src/printer.c
-	gcc -o ./bin/printer ./src/printer.c -lm
+	gcc -o ./bin/printer ./src/printer.c -lm -lpthread
 
 clean:
 	rm -rf ./bin/*

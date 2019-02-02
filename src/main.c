@@ -36,7 +36,7 @@ void child_kill_handler (int signal) {
 }
 
 int main(int argc, char *argv[]) {
-  char sensor_l[25], sensor_r[25], sensor_c[25], lector_sensores[25];
+  char sensor_l[25], sensor_r[25], sensor_c[25], reader_l[25], reader_r[25], reader_c[25];
   if (signal(SIGTERM, sig_handler) == SIG_ERR) {
     printf("Can't handle SIGTERM\n");
   }
@@ -61,9 +61,16 @@ int main(int argc, char *argv[]) {
     strcpy(sensor_r, buffer);
   }
   if (fscanf(fp, "%s", buffer) != EOF) {
-    strcpy(lector_sensores, buffer);
+    strcpy(reader_l, buffer);
+  }
+  if (fscanf(fp, "%s", buffer) != EOF) {
+    strcpy(reader_c, buffer);
+  }
+  if (fscanf(fp, "%s", buffer) != EOF) {
+    strcpy(reader_r, buffer);
   }
   fclose(fp);
+
   //===== SHARED MEMORY BLOCK =====//
   int shmid_freq;
   char *shm_freq;
@@ -77,7 +84,7 @@ int main(int argc, char *argv[]) {
     return(1);
   }
 
-  //===== Create sensors =====//
+  //===== CREATE SENSORS =====//
   pid_t pid_l, pid_c, pid_r, pids[2];
   // Left sensor
   pid_l = fork();
@@ -121,49 +128,63 @@ int main(int argc, char *argv[]) {
   } else { /* PARENT */
     pids[0] = pid_r;
   }
-  //===== Create lector_sensores process =====//
-  pid_t lectorL_pid;
-  // char *args_lector[3] = {lector_sensores, NULL};
-  lectorL_pid = fork();
-  if (lectorL_pid < 0) {
-    perror("lector_sensores fork failed");
+  
+  //===== Create READERS =====//
+  // LEFT READER
+  pid_t readerL_pid;
+  char *args_reader_l[3] = {reader_l, NULL};
+  readerL_pid = fork();
+  if (readerL_pid < 0) {
+    perror("readerL fork failed");
     exit(EXIT_FAILURE);
   }
-  if (lectorL_pid == 0) {  //  lector_sensores
-    // execvp(args_lector[0], args_lector);
-    system("gnome-terminal -- ./bin/lectorL");
-    // perror("execvp lector_sensores failed");
+  if (readerL_pid == 0) {  //  lector_sensores
+    execvp(args_reader_l[0], args_reader_l);
+    // system("gnome-terminal -- ./bin/lectorL");
+    perror("execvp lector_sensores failed");
     exit(EXIT_FAILURE);
   }
-  //===== Create lector_sensores process =====//
-  pid_t lectorR_pid;
-  // char *args_lector[3] = {lector_sensores, NULL};
-  lectorR_pid = fork();
-  if (lectorR_pid < 0) {
-    perror("lector_sensores fork failed");
+  // RIGHT READER
+  pid_t readerR_pid;
+  char *args_reader_r[3] = {reader_r, NULL};
+  readerR_pid = fork();
+  if (readerR_pid < 0) {
+    perror("readerR fork failed");
     exit(EXIT_FAILURE);
   }
-  if (lectorR_pid == 0) {  //  lector_sensores
-    // execvp(args_lector[0], args_lector);
-    system("gnome-terminal -- ./bin/lectorR");
-    // perror("execvp lector_sensores failed");
+  if (readerR_pid == 0) {  //  lector_sensores
+    execvp(args_reader_r[0], args_reader_r);
+    // system("gnome-terminal -- ./bin/lectorR");
+    perror("execvp lector_sensores failed");
     exit(EXIT_FAILURE);
   }
-  //===== Create lector_sensores process =====//
-  pid_t lectorC_pid;
-  // char *args_lector[3] = {lector_sensores, NULL};
-  lectorC_pid = fork();
-  if (lectorC_pid < 0) {
-    perror("lector_sensores fork failed");
+  // CENTER READER
+  pid_t readerC_pid;
+  char *args_reader_c[3] = {reader_c, NULL};
+  readerC_pid = fork();
+  if (readerC_pid < 0) {
+    perror("center reader fork failed");
     exit(EXIT_FAILURE);
   }
-  if (lectorC_pid == 0) {  //  lector_sensores
-    // execvp(args_lector[0], args_lector);
-    system("gnome-terminal -- ./bin/lectorC");
-    // perror("execvp lector_sensores failed");
+  if (readerC_pid == 0) {  //  lector_sensores
+    execvp(args_reader_c[0], args_reader_c);
+    // system("gnome-terminal -- ./bin/lectorC");
+    perror("execvp lector_sensores failed");
     exit(EXIT_FAILURE);
   }
-
+  
+  //===== CREATE PRINTER =====//
+  pid_t printer_pid;
+  printf("CREATING PRINTER\n");
+  printer_pid = fork();
+  if (printer_pid < 0) {
+    perror("printer fork failed");
+    exit(EXIT_FAILURE);
+  }
+  if (printer_pid == 0) {  //  printer
+    system("gnome-terminal -- ./bin/printer");
+    exit(EXIT_FAILURE);
+  }
   //===== Show ids of child processes =====//
   /* for (i = 0; i < 6; i = i + 1) {
     fprintf(stdout, "Sensor #%d pid: %d\n", (i + 1), pids[i]);

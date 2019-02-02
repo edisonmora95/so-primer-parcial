@@ -38,10 +38,10 @@ char tmp_g[SHMSZ];
 char tmp_d[SHMSZ];
 
 //===== SHARED MEMORY VARIABLES =====//
-char *shm_d, *shm_g;
+char *shm_d, *shm_g, *shm_rd;
 
 int main () {
-  key_t key_d, key_g;
+  key_t key_d, key_g, key_rd;
   //===== READ PARAMETERS FROM CONFIG FILE =====//
   FILE *fp;
   char str[5];
@@ -53,10 +53,11 @@ int main () {
   if (fscanf(fp, "%s", str) != EOF) {
     key_d = atoi(str);
     key_g = key_d + 1;
+    key_rd = key_g + 1;
   }
   fclose(fp);
 
-  int shmid_d, shmid_g;
+  int shmid_d, shmid_g, shmid_rd;
   int FLAGS = 0666;
   //===== pthreads =====//
   pthread_t tid;
@@ -85,7 +86,17 @@ int main () {
     perror("shmat");
     return (1);
   }
-
+  //===== MEMORY BLOCK FOR RESULT =====//
+  shmid_rd = shmget(key_rd, SHMSZ, IPC_CREAT | 0666);
+  if (shmid_rd < 0) {
+    perror("shmget");
+    return (1);
+  }
+  shm_rd = shmat(shmid_rd, NULL, 0);
+  if (shm_rd == (char *) -1) {
+    perror("shmat");
+    return (1);
+  }
   //===== CREATE THREADS =====//
   pthread_t tid_g; // Giroscope reader thread
   pthread_create(&tid_g, &attr, read_giroscope, NULL);
@@ -113,8 +124,8 @@ void *read_giroscope (void *param) {
     }
     // When a new valid value is read, it sets the gyroscope switch to 'on'
     if (strcmp(tmp_g, shm_g) != 0 && strcmp("--", shm_g) != 0 && (switch_g == 0)) {
-      printf("Nuevo valor de giroscopio leido: ");
-      printf("%s\n", shm_g);
+      // printf("Nuevo valor de giroscopio leido: ");
+      // printf("%s\n", shm_g);
       strcpy(tmp_g, shm_g);
       switch_g = 1;
     }
@@ -133,8 +144,8 @@ void *read_distance (void *param) {
       // print_distance();
     } */
     if ((strcmp(tmp_d, "--") != 0) && (switch_d == 0) && (strcmp(tmp_d, shm_d) != 0)) {
-      printf("Valor de distancia leido: ");
-      printf("%s\n", shm_d);
+      // printf("Valor de distancia leido: ");
+      // printf("%s\n", shm_d);
       switch_d = 1;
     }
     if (strcmp(tmp_d, "DONE") == 0) {
@@ -149,12 +160,13 @@ void print_distance () {
   float distance = strtod(tmp_d, NULL);
   float angle = strtod(tmp_g, NULL);
   float real_distance = distance * cos(angle / (180 * PI));
-  fprintf(stdout, "%i) Values are : %f & %f, real distance is: %f\n", contador, distance, angle, real_distance);
+  fprintf(stdout, "%i)CENTER Values are : %f & %f, real distance is: %f\n", contador, distance, angle, real_distance);
   strcpy(tmp_g, "--");
   strcpy(tmp_d, "--");
   switch_d = 0;
   switch_g = 0;
   contador++;
+  sprintf(shm_rd, "%f", real_distance);
 }
 
 
