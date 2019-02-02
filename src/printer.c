@@ -10,12 +10,26 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <pthread.h>
+#include <math.h>
 #define SHMSZ 27
 
+pthread_mutex_t mutex;
+
+struct distance {
+  double left;
+  double center;
+  double right;
+};
+
+double T = 0.5;
+double W = 2;
+
+void *car_obstacle(void *param);
 
 int main() {
   printf("PRINTER PROCESS\n");
+  struct distance distance;
   int shmid_l, shmid_r, shmid_c; // ID of the shared memory segment
   key_t key_r, key_l, key_c; // Key of the shared memory
   key_l = 1002;
@@ -25,6 +39,11 @@ int main() {
   char *shm_l, *shm_r, *shm_c;
   char tmp_l[SHMSZ], tmp_r[SHMSZ], tmp_c[SHMSZ];
   int switch_l, switch_r, switch_c;
+
+  pthread_t tid;
+  pthread_attr_t attr;
+  pthread_attr_init(&attr);
+
   //===== MEM BLOCK FOR LEFT READER =====//
   shmid_l = shmget(key_l, SHMSZ, IPC_CREAT | 0666);
   if (shmid_l < 0) {
@@ -75,12 +94,40 @@ int main() {
       strcpy(tmp_c, shm_c);
     }
     if ((switch_l == 1) && (switch_r == 1) && (switch_c == 1)) {
-      fprintf(stdout, "Y AHOOORAAAAA\n");
       switch_l = 0;
       switch_r = 0;
       switch_c = 0;
+      distance.left = atoi(tmp_l);
+      distance.center = atoi(tmp_c);
+      distance.right = atoi(tmp_r);
+      pthread_create(&tid, &attr, car_obstacle, (void *)&distance);
+
     }
   }
-
+  sleep(5);
   return(0);
+}
+
+void *car_obstacle (void *param) {
+  struct distance *distance = param;
+  float sum = 0.0, sd = 0.0, mean;
+  
+  sum = distance->left + distance->center + distance->right;
+  mean = sum/3;
+  sd = pow(distance->left - mean, 2) + pow(distance->center - mean, 2) + pow(distance->right - mean, 2);
+  sd = sqrt(sd/3);
+  // printf("Left: %f\n", distance->left);
+  // printf("Center: %f\n", distance->center);
+  // printf("Right: %f\n", distance->right);
+  printf("SD: %f\n", sd);
+
+  if ((fabs(distance->left - distance->center) < (T*sd)) && (fabs(distance->right - distance->center) < (T*sd))) {
+    printf("ES UN CARRO\n");
+  }
+
+  if ((fabs(distance->left - distance->center) == (W*sd)) || (fabs(distance->right - distance->center) == (W*sd)) || (fabs(distance->left - distance->right) == (W*sd))) {
+    printf("ES UN OBSTACULO\n");
+  }
+
+  pthread_exit(0);
 }
