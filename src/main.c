@@ -177,6 +177,7 @@ int main(int argc, char *argv[]) {
   // }*/
   
   //===== MENU =====//
+  sleep(2);
   int opcion;
   int freq;
   while (1) {

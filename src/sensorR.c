@@ -73,7 +73,6 @@ int main() {
   }
   // Third value is the shared memory block for the frequency sync
   if (fscanf(fp, "%s", str) != EOF) {
-    printf("key: %s\n", str);
     key_freq = atoi(str);
   }
 
@@ -137,7 +136,7 @@ int main() {
     // printf("Distance: %f\n", distances[i]);
     sprintf(shmd,"%f",distances[i]);
     if (i%freq == 0) {
-      printf("Angle: %f\n", anglesD[i]);
+      // printf("Angle: %f\n", anglesD[i]);
       sprintf(shmt,"%f",anglesD[i]); 
     } else {
       strcpy(shmt,"--");
